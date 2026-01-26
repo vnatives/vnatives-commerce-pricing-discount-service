@@ -1,0 +1,98 @@
+package com.vnatives.pricingdiscountservice.service.impl;
+
+import com.vnatives.pricingdiscountservice.cache.PricingCache;
+import com.vnatives.pricingdiscountservice.entity.PricingRule;
+import com.vnatives.pricingdiscountservice.entity.ProductBasePrice;
+import com.vnatives.pricingdiscountservice.mapper.PriceMapper;
+import com.vnatives.pricingdiscountservice.repository.PricingRuleRepository;
+import com.vnatives.pricingdiscountservice.repository.ProductBasePriceRepository;
+import com.vnatives.pricingdiscountservice.resolver.PricingRuleResolver;
+import com.vnatives.pricingdiscountservice.rule.PricingRuleFilter;
+import com.vnatives.pricingdiscountservice.service.PriceCalculator;
+import com.vnatives.pricingdiscountservice.service.PricingService;
+import com.vnatives.vnatives_common_sdk.dto.request.CreateBasePriceRequestDTO;
+import com.vnatives.vnatives_common_sdk.dto.request.CreatePricingRuleRequestDTO;
+import com.vnatives.vnatives_common_sdk.dto.request.PriceResolveRequestDTO;
+import com.vnatives.vnatives_common_sdk.dto.response.PriceResolveResponseDTO;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Optional;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class PricingServiceImpl implements PricingService {
+
+    private final ProductBasePriceRepository basePriceRepo;
+    private final PricingRuleRepository ruleRepo;
+    private final PricingCache cache;
+
+    @Override
+    public void saveBasePrice(CreateBasePriceRequestDTO request) {
+        ProductBasePrice entity = PriceMapper.toEntity(request);
+        basePriceRepo.save(entity);
+    }
+
+    @Override
+    public void createRule(CreatePricingRuleRequestDTO request) {
+        PricingRule entity = PriceMapper.toEntity(request);
+        ruleRepo.save(entity);
+    }
+
+    public PriceResolveResponseDTO resolvePrice(PriceResolveRequestDTO request) {
+
+        String cacheKey = PricingCache.getKey(request.getShopId(),  request.getProductId(), request.getVariantId());
+
+        Optional<PriceResolveResponseDTO> cacheOptional = cache.get(cacheKey);
+        if(cacheOptional.isPresent()) {
+            log.info("Get from cache for {}", cacheKey);
+            return cacheOptional.get();
+        }
+
+        ProductBasePrice basePrice = basePriceRepo
+                .findByShopIdAndProductIdAndVariantIdAndActiveTrue(
+                        request.getShopId(),
+                        request.getProductId(),
+                        request.getVariantId())
+                .orElseThrow(() -> new RuntimeException("Base price not found"));
+
+        List<PricingRule> rules = ruleRepo.findByShopIdAndActiveTrue(request.getShopId());
+
+        List<PricingRule> applicableRules =
+                PricingRuleFilter.filterApplicableRules(
+                        rules,
+                        request.getProductId(),
+                        request.getVariantId(),
+                        request.getAtTime());
+
+        PricingRule rule = PricingRuleResolver.resolve(applicableRules);
+
+        BigDecimal discount = PriceCalculator.calculateDiscount(
+                        basePrice.getBasePrice(), rule);
+
+        BigDecimal finalPrice = basePrice.getBasePrice().subtract(discount);
+
+        PriceResolveResponseDTO response =
+                PriceResolveResponseDTO.builder()
+                        .basePrice(basePrice.getBasePrice())
+                        .discountAmount(discount)
+                        .finalPrice(finalPrice)
+                        .appliedRuleType(
+                                rule != null ? rule.getRuleType().toString() : null)
+//                        .ruleEndTime(rule.getEndTime())
+                        .build();
+
+        cache.put(cacheKey, response);
+        return response;
+
+    }
+
+    @Override
+    public void clearPricingCache() {
+        cache.clear();
+    }
+}

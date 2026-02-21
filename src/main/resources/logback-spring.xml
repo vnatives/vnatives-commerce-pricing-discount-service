@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true">
+
+    <!-- ========== Spring properties ========== -->
+    <springProperty name="SERVICE_NAME" source="spring.application.name"/>
+    <springProperty name="ACTIVE_PROFILE" source="spring.profiles.active"/>
+
+    <!-- ========== Log file path ========== -->
+    <property name="LOG_PATH" value="logs"/>
+    <property name="LOG_FILE" value="${LOG_PATH}/${SERVICE_NAME}.json"/>
+
+    <!-- ========== JSON File Appender ========== -->
+    <appender name="JSON" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_FILE}</file>
+
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/${SERVICE_NAME}.%d{yyyy-MM-dd}.json</fileNamePattern>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>5GB</totalSizeCap>
+        </rollingPolicy>
+
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+
+            <!-- 🔑 REQUIRED -->
+            <includeMdc>true</includeMdc>
+            <includeContext>true</includeContext>
+            <includeCallerData>false</includeCallerData>
+
+            <!-- 🔥 Promote tracing fields to top-level -->
+            <customFields>
+                {
+                "service_name": "${SERVICE_NAME}",
+                "environment": "${ACTIVE_PROFILE}"
+                }
+            </customFields>
+
+            <!-- 🔥 Explicit MDC keys -->
+            <fieldNames>
+                <timestamp>@timestamp</timestamp>
+                <level>level</level>
+                <logger>logger_name</logger>
+                <thread>thread_name</thread>
+                <message>message</message>
+            </fieldNames>
+        </encoder>
+    </appender>
+
+    <!-- ========== Async Wrapper ========== -->
+    <appender name="ASYNC_JSON" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>512</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <appender-ref ref="JSON"/>
+    </appender>
+
+    <!-- ========== Profiles ========== -->
+
+    <!-- LOCAL / DEV -->
+    <springProfile name="local,dev">
+        <root level="INFO">
+            <appender-ref ref="ASYNC_JSON"/>
+        </root>
+        <logger name="com.vnatives" level="DEBUG"/>
+        <logger name="org.springframework.web" level="DEBUG"/>
+        <logger name="org.hibernate.SQL" level="DEBUG"/>
+    </springProfile>
+
+    <!-- STAGING -->
+    <springProfile name="staging">
+        <root level="DEBUG">
+            <appender-ref ref="ASYNC_JSON"/>
+        </root>
+        <logger name="com.vnatives" level="DEBUG"/>
+    </springProfile>
+
+    <!-- PROD -->
+    <springProfile name="prod,production">
+        <root level="INFO">
+            <appender-ref ref="ASYNC_JSON"/>
+        </root>
+        <logger name="com.vnatives" level="INFO"/>
+        <logger name="org.springframework" level="WARN"/>
+        <logger name="org.hibernate" level="WARN"/>
+    </springProfile>
+
+</configuration>

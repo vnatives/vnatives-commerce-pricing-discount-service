@@ -4,16 +4,16 @@ import com.vnatives.pricingdiscountservice.entity.DiscountType;
 import com.vnatives.pricingdiscountservice.entity.PricingRule;
 import com.vnatives.pricingdiscountservice.entity.ProductBasePrice;
 import com.vnatives.pricingdiscountservice.entity.RuleType;
-import com.vnatives.vnatives_common_sdk.dto.request.CreateBasePriceRequestDTO;
-import com.vnatives.vnatives_common_sdk.dto.request.CreatePricingRuleRequestDTO;
-import com.vnatives.vnatives_common_sdk.dto.response.PriceResolveResponseDTO;
+import com.vnatives.vnatives_common_sdk.dto.request.pricing.CreateBasePriceRequestDTO;
+import com.vnatives.vnatives_common_sdk.dto.request.pricing.CreatePricingRuleRequestDTO;
 
 public class PriceMapper {
+
     public static ProductBasePrice toEntity(CreateBasePriceRequestDTO request) {
         return ProductBasePrice.builder()
                 .shopId(request.getShopId())
                 .productId(request.getProductId())
-                .variantId(request.getVariantId())
+                .productVariantId(request.getProductVariantId())
                 .basePrice(request.getBasePrice())
                 .currency(request.getCurrency())
                 .active(true)
@@ -24,12 +24,12 @@ public class PriceMapper {
         return PricingRule.builder()
                 .shopId(request.getShopId())
                 .productId(request.getProductId())
-                .variantId(request.getVariantId())
+                .productVariantId(request.getProductVariantId())
                 .ruleType(RuleType.valueOf(request.getRuleType()))
                 .discountType(DiscountType.valueOf(request.getDiscountType()))
                 .discountValue(request.getDiscountValue())
                 .startTime(request.getStartTime())
-                .endTime(request.getEndTime())
+//                .endTime(request.getEndTime())
                 .priority(request.getPriority())
                 .active(true)
                 .build();

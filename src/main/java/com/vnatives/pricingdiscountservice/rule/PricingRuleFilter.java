@@ -10,15 +10,15 @@ public class PricingRuleFilter {
 
     public static List<PricingRule> filterApplicableRules(
             List<PricingRule> rules,
-            Long productId,
-            Long variantId,
+            String productId,
+            String variantId,
             Instant atTime) {
 
         return rules.stream()
                 .filter(PricingRule::isActive)
                 .filter(r ->
                         (r.getProductId() == null || r.getProductId().equals(productId)) &&
-                                (r.getVariantId() == null || r.getVariantId().equals(variantId)) &&
+                                (r.getProductVariantId() == null || r.getProductVariantId().equals(variantId)) &&
                                 !atTime.isBefore(r.getStartTime()) &&
                                 !atTime.isAfter(r.getEndTime())
                 )

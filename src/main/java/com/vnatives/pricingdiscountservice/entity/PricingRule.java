@@ -19,12 +19,15 @@ import java.util.UUID;
 public class PricingRule {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(updatable = false, nullable = false)
+    private UUID id;
 
-    private Long shopId;
-    private Long productId;
-    private Long variantId;
+    private String shopId;
+
+    private String productId;
+
+    private String productVariantId;
 
     @Enumerated(EnumType.STRING)
     private RuleType ruleType;
@@ -35,6 +38,7 @@ public class PricingRule {
     private BigDecimal discountValue;
 
     private Instant startTime;
+
     private Instant endTime;
 
     private int priority;

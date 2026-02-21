@@ -7,5 +7,5 @@ import java.util.Optional;
 
 public interface ProductBasePriceRepository extends JpaRepository<ProductBasePrice, Long> {
 
-    Optional<ProductBasePrice> findByShopIdAndProductIdAndVariantIdAndActiveTrue(Long shopId, Long productId, Long variantId);
+    Optional<ProductBasePrice> findByShopIdAndProductIdAndProductVariantIdAndActiveTrue(String shopId, String productId, String productVariantId);
 }

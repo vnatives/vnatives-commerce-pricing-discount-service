@@ -1,9 +1,8 @@
 package com.vnatives.pricingdiscountservice.service;
-
-import com.vnatives.vnatives_common_sdk.dto.request.CreateBasePriceRequestDTO;
-import com.vnatives.vnatives_common_sdk.dto.request.CreatePricingRuleRequestDTO;
-import com.vnatives.vnatives_common_sdk.dto.request.PriceResolveRequestDTO;
-import com.vnatives.vnatives_common_sdk.dto.response.PriceResolveResponseDTO;
+import com.vnatives.vnatives_common_sdk.dto.request.pricing.CreateBasePriceRequestDTO;
+import com.vnatives.vnatives_common_sdk.dto.request.pricing.CreatePricingRuleRequestDTO;
+import com.vnatives.vnatives_common_sdk.dto.request.pricing.PriceResolveRequestDTO;
+import com.vnatives.vnatives_common_sdk.dto.response.pricing.PriceResolveResponseDTO;
 import org.springframework.web.bind.annotation.RequestBody;
 
 public interface PricingService {

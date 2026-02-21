@@ -18,14 +18,18 @@ import java.util.UUID;
 public class ProductBasePrice {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(updatable = false, nullable = false)
+    private UUID id;
 
-    private Long shopId;
-    private Long productId;
-    private Long variantId;
+    private String shopId;
+
+    private String productId;
+
+    private String productVariantId;
 
     private BigDecimal basePrice;
+
     private String currency;
 
     private boolean active;

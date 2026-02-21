@@ -6,5 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface PricingRuleRepository extends JpaRepository<PricingRule, Long> {
-    List<PricingRule> findByShopIdAndActiveTrue(Long shopId);
+    List<PricingRule> findByShopIdAndActiveTrue(String shopId);
 }

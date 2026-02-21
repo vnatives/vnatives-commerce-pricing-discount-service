@@ -1,6 +1,6 @@
 package com.vnatives.pricingdiscountservice.config;
 
-import com.vnatives.vnatives_common_sdk.dto.response.PriceResolveResponseDTO;
+import com.vnatives.vnatives_common_sdk.dto.response.pricing.PriceResolveResponseDTO;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;

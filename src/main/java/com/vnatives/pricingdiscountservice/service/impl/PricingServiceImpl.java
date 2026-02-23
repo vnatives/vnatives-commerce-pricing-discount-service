@@ -1,5 +1,6 @@
 package com.vnatives.pricingdiscountservice.service.impl;
 
+import com.vnatives.pricingdiscountservice.cache.CacheObject;
 import com.vnatives.pricingdiscountservice.cache.PricingCache;
 import com.vnatives.pricingdiscountservice.entity.PricingRule;
 import com.vnatives.pricingdiscountservice.entity.ProductBasePrice;
@@ -20,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.Optional;
 
@@ -39,6 +41,7 @@ public class PricingServiceImpl implements PricingService {
         log.info("Save Base Price Request {}", request);
         ProductBasePrice entity = PriceMapper.toEntity(request);
         basePriceRepo.save(entity);
+        cache.clear();
         log.info("Save Base Price Success {}", entity);
     }
 
@@ -47,6 +50,7 @@ public class PricingServiceImpl implements PricingService {
         log.info("Inside PricingServiceImpl createRule with request {}", request);
         PricingRule entity = PriceMapper.toEntity(request);
         ruleRepo.save(entity);
+        cache.clear();
         log.info("Create PricingRule Success {}", entity);
     }
 
@@ -54,46 +58,64 @@ public class PricingServiceImpl implements PricingService {
         log.info("Inside PricingServiceImpl resolvePrice request {}", request);
         String cacheKey = PricingCache.getKey(request.getShopId(),  request.getProductId(), request.getProductVariantId());
 
-        Optional<PriceResolveResponseDTO> cacheOptional = cache.get(cacheKey);
+        ProductBasePrice basePrice = null;
+        PricingRule rule = null;
+        Optional<CacheObject> cacheOptional = cache.get(cacheKey);
+
         if(cacheOptional.isPresent()) {
             log.info("Get from cache for {}", cacheKey);
-            return cacheOptional.get();
+            CacheObject cacheObject = cacheOptional.get();
+            basePrice = cacheObject.getProductBasePrice();
+            rule = cacheObject.getRule();
+        } else {
+           basePrice = basePriceRepo.findByShopIdAndProductIdAndProductVariantIdAndActiveTrue(
+                            request.getShopId(),
+                            request.getProductId(),
+                            request.getProductVariantId())
+                    .orElseThrow(() -> new BasePriceNotFoundException(request.getShopId(),  request.getProductId(), request.getProductVariantId()));
+
+            List<PricingRule> rules = ruleRepo.findByShopIdAndActiveTrue(request.getShopId());
+
+            List<PricingRule> applicableRules =
+                    PricingRuleFilter.filterApplicableRules(
+                            rules,
+                            request.getProductId(),
+                            request.getProductVariantId(),
+                            request.getAtTime());
+
+            rule = PricingRuleResolver.resolve(applicableRules);
+
+            cache.put(cacheKey, basePrice, rule);
         }
 
-        ProductBasePrice basePrice = basePriceRepo
-                .findByShopIdAndProductIdAndProductVariantIdAndActiveTrue(
-                        request.getShopId(),
-                        request.getProductId(),
-                        request.getProductVariantId())
-                .orElseThrow(() -> new BasePriceNotFoundException(request.getShopId(),  request.getProductId(), request.getProductVariantId()));
 
-        List<PricingRule> rules = ruleRepo.findByShopIdAndActiveTrue(request.getShopId());
+        BigDecimal unitDiscount = PriceCalculator.calculateDiscount(basePrice.getBasePrice(), rule)
+                        .setScale(2, RoundingMode.HALF_UP);
 
-        List<PricingRule> applicableRules =
-                PricingRuleFilter.filterApplicableRules(
-                        rules,
-                        request.getProductId(),
-                        request.getProductVariantId(),
-                        request.getAtTime());
+        BigDecimal totalDiscount = unitDiscount.multiply(request.getQuantity())
+                        .setScale(2, RoundingMode.HALF_UP);
 
-        PricingRule rule = PricingRuleResolver.resolve(applicableRules);
+        BigDecimal unitFinalPrice = basePrice.getBasePrice().subtract(unitDiscount)
+                        .setScale(2, RoundingMode.HALF_UP);
 
-        BigDecimal discount = PriceCalculator.calculateDiscount(
-                        basePrice.getBasePrice(), rule);
+        BigDecimal totalPrice = basePrice.getBasePrice()
+                        .multiply(request.getQuantity())
+                        .setScale(2, RoundingMode.HALF_UP);
 
-        BigDecimal finalPrice = basePrice.getBasePrice().subtract(discount);
+        BigDecimal finalPrice = unitFinalPrice
+                        .multiply(request.getQuantity())
+                        .setScale(2, RoundingMode.HALF_UP);
 
         PriceResolveResponseDTO response =
                 PriceResolveResponseDTO.builder()
                         .basePrice(basePrice.getBasePrice())
-                        .discountAmount(discount)
+                        .discountAmount(totalDiscount)
                         .finalPrice(finalPrice)
-                        .appliedRuleType(
-                                rule != null ? rule.getRuleType().toString() : null)
+                        .totalPrice(totalPrice)
+                        .appliedRuleType(rule != null ? rule.getRuleType().toString() : null)
                         .ruleEndTime(rule.getEndTime())
                         .build();
 
-        cache.put(cacheKey, response);
         log.info("PricingServiceImpl resolvePrice success {}", response);
         return response;
 
@@ -103,4 +125,5 @@ public class PricingServiceImpl implements PricingService {
     public void clearPricingCache() {
         cache.clear();
     }
+
 }

@@ -1,5 +1,7 @@
 package com.vnatives.pricingdiscountservice.cache;
 
+import com.vnatives.pricingdiscountservice.entity.PricingRule;
+import com.vnatives.pricingdiscountservice.entity.ProductBasePrice;
 import com.vnatives.vnatives_common_sdk.dto.response.pricing.PriceResolveResponseDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,7 +19,7 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class PricingCache {
 
-    private final RedisTemplate<String, PriceResolveResponseDTO> redisTemplate;
+    private final RedisTemplate<String, CacheObject> redisTemplate;
 
     public static final String REDIS_CACHE_PREFIX = "pricing:";
 
@@ -31,7 +33,7 @@ public class PricingCache {
     /**
      * Get cached price if present
      */
-    public Optional<PriceResolveResponseDTO> get(String key) {
+    public Optional<CacheObject> get(String key) {
         try {
             return Optional.ofNullable(redisTemplate.opsForValue().get(key));
         } catch (Exception e) {
@@ -42,20 +44,21 @@ public class PricingCache {
     /**
      * Store price with TTL until rule end time
      */
-    public void put(String key, PriceResolveResponseDTO response) {
+    public void put(String key, ProductBasePrice basePrice, PricingRule rule) {
         try {
-            if (response.getRuleEndTime() == null) {
-                redisTemplate.opsForValue().set(key, response, Duration.ofMinutes(5));
+            CacheObject cacheObject = CacheObject.builder().productBasePrice(basePrice).rule(rule).build();
+            if (rule.getEndTime() == null) {
+                redisTemplate.opsForValue().set(key, cacheObject, Duration.ofMinutes(5));
                 return;
             }
 
             long ttlSeconds = Duration.between(
                     Instant.now(),
-                    response.getRuleEndTime()
+                    rule.getEndTime()
             ).getSeconds();
 
             if (ttlSeconds > 0) {
-                redisTemplate.opsForValue().set(key, response, ttlSeconds, TimeUnit.SECONDS);
+                redisTemplate.opsForValue().set(key, cacheObject, ttlSeconds, TimeUnit.SECONDS);
             }
         } catch (Exception e) {
             log.warn("Redis PUT failed for key {}", key, e);

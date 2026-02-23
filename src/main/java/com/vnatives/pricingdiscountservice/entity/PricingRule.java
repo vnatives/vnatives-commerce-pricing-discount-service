@@ -42,5 +42,6 @@ public class PricingRule {
     private Instant endTime;
 
     private int priority;
+
     private boolean active;
 }

@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/int/v1/api/pricing/cache")
+@RequestMapping("/int/v1/api/pricing-svc/cache")
 @RequiredArgsConstructor
 @Slf4j
 public class CacheController {

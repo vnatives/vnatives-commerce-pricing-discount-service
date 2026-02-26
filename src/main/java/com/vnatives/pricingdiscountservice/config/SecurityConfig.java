@@ -12,19 +12,19 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http
-                .csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(auth -> auth
-                        // Infra
-                        .requestMatchers("/actuator/health").permitAll()
+            // 🔑 EXPLICIT matcher — THIS IS THE FIX
+            .securityMatcher("/int/**", "/actuator/**")
 
-                        // Internal APIs
-                        .requestMatchers("/int/**").permitAll()
+            .csrf(csrf -> csrf.disable())
 
-                        // Everything else (future safety)
-                        .anyRequest().denyAll()
-                )
-//                .httpBasic(Customizer.withDefaults())
-                .httpBasic(httpBasic -> httpBasic.disable());
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/actuator/health").permitAll()
+                .requestMatchers("/int/**").permitAll()
+                .anyRequest().denyAll()
+            )
+
+            .httpBasic(httpBasic -> httpBasic.disable());
+
         return http.build();
     }
 

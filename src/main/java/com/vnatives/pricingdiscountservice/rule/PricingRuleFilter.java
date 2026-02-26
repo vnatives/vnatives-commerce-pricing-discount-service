@@ -18,10 +18,18 @@ public class PricingRuleFilter {
                 .filter(PricingRule::isActive)
                 .filter(r ->
                         (r.getProductId() == null || r.getProductId().equals(productId)) &&
-                                (r.getProductVariantId() == null || r.getProductVariantId().equals(variantId)) &&
-                                !atTime.isBefore(r.getStartTime()) &&
-                                !atTime.isAfter(r.getEndTime())
+                                (r.getProductVariantId() == null || r.getProductVariantId().equals(variantId))
                 )
+                .filter(r -> {
+
+                    Instant start = r.getStartTime();
+                    Instant end = r.getEndTime();
+
+                    boolean afterStart = (start == null) || !atTime.isBefore(start);
+                    boolean beforeEnd = (end == null) || !atTime.isAfter(end);
+
+                    return afterStart && beforeEnd;
+                })
                 .collect(Collectors.toList());
     }
 }

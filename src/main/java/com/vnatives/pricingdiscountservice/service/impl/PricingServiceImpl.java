@@ -114,6 +114,7 @@ public class PricingServiceImpl implements PricingService {
                         .totalPrice(totalPrice)
                         .appliedRuleType(rule != null ? rule.getRuleType().toString() : null)
                         .ruleEndTime(rule.getEndTime())
+                        .currency(basePrice.getCurrency())
                         .build();
 
         log.info("PricingServiceImpl resolvePrice success {}", response);
